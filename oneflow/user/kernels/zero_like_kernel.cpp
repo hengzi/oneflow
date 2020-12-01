@@ -22,7 +22,7 @@ template<DeviceType device_type>
 class ZeroLikeKernel final : public user_op::OpKernel {
  public:
   ZeroLikeKernel() = default;
-  ~ZeroLikeKernel() = default;
+  ~ZeroLikeKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
