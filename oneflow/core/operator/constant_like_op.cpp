@@ -21,7 +21,7 @@ class ConstantLikeOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConstantLikeOp);
   ConstantLikeOp() = default;
-  ~ConstantLikeOp() = default;
+  ~ConstantLikeOp() override = default;
 
   void InitFromOpConf() override {
     CHECK(op_conf().has_constant_like_conf());
@@ -60,6 +60,5 @@ class ConstantLikeOp final : public Operator {
 };
 
 REGISTER_OP(OperatorConf::kConstantLikeConf, ConstantLikeOp);
-REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kConstantLikeConf, 1);
 
 }  // namespace oneflow

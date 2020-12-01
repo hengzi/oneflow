@@ -22,15 +22,12 @@ template<DeviceType device_type, typename T>
 class ConstantLikeKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConstantLikeKernel);
-  ConstantLikeKernel() : is_init_(false) {}
-  ~ConstantLikeKernel() = default;
+  ConstantLikeKernel() = default;
+  ~ConstantLikeKernel() override = default;
 
  private:
-  mutable bool is_init_;
-
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    if (is_init_) { return; }
     Blob* out_blob = BnInOp2Blob("out");
     T value = static_cast<T>(0);
     const auto& conf = this->op_conf().constant_like_conf();
@@ -43,7 +40,6 @@ class ConstantLikeKernel final : public KernelIf<device_type> {
     }
     NewKernelUtil<device_type>::Fill(ctx.device_ctx, out_blob->static_shape().elem_cnt(), value,
                                      out_blob->mut_dptr<T>());
-    is_init_ = true;
   }
 };
 
