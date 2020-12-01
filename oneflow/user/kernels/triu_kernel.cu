@@ -13,17 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
 
+namespace {
+
 template<typename T>
-class CpuTrilKernel final : public user_op::OpKernel {
+__global__ void TriuGpu(const int64_t elem_cnt, const int64_t num_rows, const int64_t num_cols,
+                        const int64_t diagonal, const T* x, const T fill, T* y) {
+  int64_t matrix_size = num_rows * num_cols;
+  CUDA_1D_KERNEL_LOOP_T(int64_t, k, elem_cnt) {
+    int64_t offset_in_matrix = k % matrix_size;
+    int64_t i = offset_in_matrix / num_cols;
+    int64_t j = offset_in_matrix - num_cols * i;
+    y[k] = j < i + diagonal ? fill : x[k];
+  }
+}
+
+}  // namespace
+
+template<typename T>
+class GpuTriuKernel final : public user_op::OpKernel {
  public:
-  CpuTrilKernel() = default;
-  ~CpuTrilKernel() override = default;
+  GpuTriuKernel() = default;
+  ~GpuTriuKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -33,31 +49,26 @@ class CpuTrilKernel final : public user_op::OpKernel {
     const int64_t num_rows = shape.At(shape.NumAxes() - 2);
     const int64_t num_cols = shape.At(shape.NumAxes() - 1);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
-    T* y_dptr = y->mut_dptr<T>();
-    const T* x_dptr = x->dptr<T>();
+    const int32_t elem_cnt = shape.elem_cnt();
     const T fill = ctx->Attr<bool>("is_floating_fill_value")
                        ? static_cast<T>(ctx->Attr<double>("floating_fill_value"))
                        : static_cast<T>(ctx->Attr<int64_t>("integer_fill_value"));
-    int64_t matrix_size = num_rows * num_cols;
-    for (int64_t k = 0; k < shape.elem_cnt(); ++k) {
-      int64_t offset_in_matrix = k % matrix_size;
-      int64_t i = offset_in_matrix / num_cols;
-      int64_t j = offset_in_matrix - num_cols * i;
-      y_dptr[k] = j > i + diagonal ? fill : x_dptr[k];
-    }
+    RUN_CUDA_KERNEL((TriuGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, num_rows, num_cols,
+                    diagonal, x->dptr<T>(), fill, y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_TRIL_KERNEL(dtype)                                             \
-  REGISTER_USER_KERNEL("tril").SetCreateFn<CpuTrilKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "cpu")                                            \
+#define REGISTER_GPU_TRIU_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("triu").SetCreateFn<GpuTriuKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == "gpu")                                            \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_TRIL_KERNEL(float)
-REGISTER_CPU_TRIL_KERNEL(double)
-REGISTER_CPU_TRIL_KERNEL(int8_t)
-REGISTER_CPU_TRIL_KERNEL(int32_t)
-REGISTER_CPU_TRIL_KERNEL(int64_t)
+REGISTER_GPU_TRIU_KERNEL(float)
+REGISTER_GPU_TRIU_KERNEL(double)
+REGISTER_GPU_TRIU_KERNEL(int8_t)
+REGISTER_GPU_TRIU_KERNEL(int32_t)
+REGISTER_GPU_TRIU_KERNEL(int64_t)
+REGISTER_GPU_TRIU_KERNEL(float16)
 
 }  // namespace oneflow

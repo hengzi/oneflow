@@ -20,10 +20,10 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-class CpuTrilKernel final : public user_op::OpKernel {
+class CpuTriuKernel final : public user_op::OpKernel {
  public:
-  CpuTrilKernel() = default;
-  ~CpuTrilKernel() override = default;
+  CpuTriuKernel() = default;
+  ~CpuTriuKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -43,21 +43,21 @@ class CpuTrilKernel final : public user_op::OpKernel {
       int64_t offset_in_matrix = k % matrix_size;
       int64_t i = offset_in_matrix / num_cols;
       int64_t j = offset_in_matrix - num_cols * i;
-      y_dptr[k] = j > i + diagonal ? fill : x_dptr[k];
+      y_dptr[k] = j < i + diagonal ? fill : x_dptr[k];
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_TRIL_KERNEL(dtype)                                             \
-  REGISTER_USER_KERNEL("tril").SetCreateFn<CpuTrilKernel<dtype>>().SetIsMatchedHob( \
+#define REGISTER_CPU_TRIU_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("triu").SetCreateFn<CpuTriuKernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceTag() == "cpu")                                            \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_TRIL_KERNEL(float)
-REGISTER_CPU_TRIL_KERNEL(double)
-REGISTER_CPU_TRIL_KERNEL(int8_t)
-REGISTER_CPU_TRIL_KERNEL(int32_t)
-REGISTER_CPU_TRIL_KERNEL(int64_t)
+REGISTER_CPU_TRIU_KERNEL(float)
+REGISTER_CPU_TRIU_KERNEL(double)
+REGISTER_CPU_TRIU_KERNEL(int8_t)
+REGISTER_CPU_TRIU_KERNEL(int32_t)
+REGISTER_CPU_TRIU_KERNEL(int64_t)
 
 }  // namespace oneflow
