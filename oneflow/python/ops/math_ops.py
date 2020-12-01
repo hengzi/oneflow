@@ -1923,36 +1923,6 @@ def tril(
     )
 
 
-@oneflow_export("math.triu", "nn.triu")
-def triu(
-    x: remote_blob_util.BlobDef,
-    diagonal: int = 0,
-    fill_value=0,
-    name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    if isinstance(fill_value, float):
-        is_floating_fill_value = True
-        floating_fill_value = float(fill_value)
-        integer_fill_value = int(0)
-    else:
-        is_floating_fill_value = False
-        floating_fill_value = float(0)
-        integer_fill_value = int(fill_value)
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Triu_"))
-        .Op("triu")
-        .Input("in", [x])
-        .Attr("diagonal", diagonal)
-        .Attr("is_floating_fill_value", is_floating_fill_value)
-        .Attr("floating_fill_value", floating_fill_value)
-        .Attr("integer_fill_value", integer_fill_value)
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
 @oneflow_export("math.polyval")
 def polyval(
     coeffs: Union[List, Tuple], x: remote_blob_util.BlobDef, name: Optional[str] = None
