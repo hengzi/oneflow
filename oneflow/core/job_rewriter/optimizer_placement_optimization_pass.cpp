@@ -245,11 +245,12 @@ void ForEachModelSizeBalancedPartition(
 }
 
 Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder) {
+  const int64_t threshold = 1024;
   const auto IsAllowed = [](const OpNode* n) -> bool {
     if (n->op().op_conf().has_variable_conf()) {
-      const int64_t dim0_size = n->op().op_conf().variable_conf().shape().dim(0);
+      const Shape shape(n->op().op_conf().variable_conf().shape());
       const int64_t parallel_num = n->parallel_desc().parallel_num();
-      return dim0_size % parallel_num == 0;
+      return shape.At(0) % parallel_num == 0 && shape.elem_cnt() / parallel_num >= threshold;
     } else {
       return IsS0SignatureSupported(n);
     }
