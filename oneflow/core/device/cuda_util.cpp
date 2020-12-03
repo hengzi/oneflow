@@ -81,16 +81,6 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error) {
 
 #endif
 
-void InitGlobalCudaDeviceProp() {
-  CHECK(Global<cudaDeviceProp>::Get() == nullptr) << "initialized Global<cudaDeviceProp> twice";
-  Global<cudaDeviceProp>::New();
-  cudaGetDeviceProperties(Global<cudaDeviceProp>::Get(), 0);
-  if (IsCuda9OnTuringDevice()) {
-    LOG(WARNING)
-        << "CUDA 9 running on Turing device has known issues, consider upgrading to CUDA 10";
-  }
-}
-
 int32_t GetSMCudaMaxBlocksNum() {
   const auto& global_device_prop = *Global<cudaDeviceProp>::Get();
   int32_t n =
@@ -123,6 +113,18 @@ template<>
 void CudaCheck(curandStatus_t error) {
   CHECK_EQ(error, CURAND_STATUS_SUCCESS) << CurandGetErrorString(error);
 }
+
+void InitGlobalCudaDeviceProp() {
+  CHECK(Global<cudaDeviceProp>::Get() == nullptr) << "initialized Global<cudaDeviceProp> twice";
+  Global<cudaDeviceProp>::New();
+  cudaGetDeviceProperties(Global<cudaDeviceProp>::Get(), 0);
+  if (IsCuda9OnTuringDevice()) {
+    LOG(WARNING)
+        << "CUDA 9 running on Turing device has known issues, consider upgrading to CUDA 10";
+  }
+  CudaCheck(cublasLoggerConfigure(1, 1, 1, NULL));
+}
+
 
 size_t GetAvailableGpuMemSize(int dev_id) {
   cudaDeviceProp prop;
