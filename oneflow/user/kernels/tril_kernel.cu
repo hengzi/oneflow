@@ -21,14 +21,14 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-__global__ void TrilGpu(const int64_t elem_cnt, const int64_t num_rows, const int64_t num_cols,
-                        const int64_t diagonal, const T* x, const T fill, T* y) {
-  int64_t matrix_size = num_rows * num_cols;
-  CUDA_1D_KERNEL_LOOP_T(int64_t, k, elem_cnt) {
-    int64_t offset_in_matrix = k % matrix_size;
-    int64_t i = offset_in_matrix / num_cols;
-    int64_t j = offset_in_matrix - num_cols * i;
+template<typename T, typename T2>
+__global__ void TrilGpu(const T2 elem_cnt, const T2 num_rows, const T2 num_cols, const T2 diagonal,
+                        const T* x, const T fill, T* y) {
+  T2 matrix_size = num_rows * num_cols;
+  CUDA_1D_KERNEL_LOOP_T(T2, k, elem_cnt) {
+    T2 offset_in_matrix = k % matrix_size;
+    T2 i = offset_in_matrix / num_cols;
+    T2 j = offset_in_matrix - num_cols * i;
     y[k] = j > i + diagonal ? fill : x[k];
   }
 }
@@ -53,8 +53,8 @@ class GpuTrilKernel final : public user_op::OpKernel {
     const T fill = ctx->Attr<bool>("is_floating_fill_value")
                        ? static_cast<T>(ctx->Attr<double>("floating_fill_value"))
                        : static_cast<T>(ctx->Attr<int64_t>("integer_fill_value"));
-    RUN_CUDA_KERNEL((TrilGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, num_rows, num_cols,
-                    diagonal, x->dptr<T>(), fill, y->mut_dptr<T>());
+    RUN_CUDA_KERNEL((TrilGpu<T, int32_t>), ctx->device_ctx(), elem_cnt, elem_cnt, num_rows,
+                    num_cols, diagonal, x->dptr<T>(), fill, y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
