@@ -278,7 +278,9 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
     const std::vector<std::map<int64_t, RuntimeRequestInfo>>& ranks) {
   CHECK_EQ(group.size(), ranks.size());
   if (group.empty()) { return; }
-  std::map<int64_t, std::vector<std::function<void(Maybe<void>)>>> device_id2callbacks;
+  const int64_t group_size = group.size();
+  std::map<int64_t, std::vector<std::shared_ptr<const std::function<void(const Maybe<void>&)>>>>
+      device_id2callbacks;
   const int64_t stream_id = current_stream_id_;
   current_stream_id_ = (current_stream_id_ + 1) % num_streams_;
   CudaCurrentDeviceGuard device_guard;
@@ -318,6 +320,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
             .src = device_ctx->fusion_buffer + offset,
             .count = static_cast<size_t>(size),
         });
+        device_id2callbacks[device_id].reserve(group_size);
         device_id2callbacks[device_id].push_back(request_info.callback);
       }
       offset += aligned_size;
@@ -367,7 +370,9 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
         const int64_t elem_cnt = Shape(op_desc.shape()).elem_cnt();
         const void* send_buff = request_info.send_buff;
         void* recv_buff = request_info.recv_buff;
+        device_id2callbacks[device_id].reserve(group_size);
         device_id2callbacks[device_id].push_back(request_info.callback);
+
         if (op_type == OpType::kOpTypeAllReduce) {
           OF_NCCL_CHECK(ncclAllReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                       GetNcclReduceOp(op_desc.reduce_method()), comm,
@@ -422,7 +427,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
       std::unique_lock<std::mutex> event_list_lock(event_list_mutex_);
       event_list_.emplace_back(Event{device_id, event, [=](const Maybe<void>& status) {
                                        for (const auto& callback : device_id7callbacks.second) {
-                                         callback(status);
+                                         (*callback)(status);
                                        }
                                      }});
       event_list_cond_.notify_all();
