@@ -71,7 +71,7 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         != DataType::kFloat16) {
       return;
     }
-    if (op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.input("out", 0))).data_type()
+    if (op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.output("out", 0))).data_type()
         != DataType::kFloat) {
       return;
     }
