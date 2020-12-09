@@ -20,7 +20,7 @@ namespace {
 
 Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* scalar = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc* scalar = ctx->TensorDesc4ArgNameAndIndex("scalar", 0);
   CHECK_EQ_OR_RETURN(scalar->shape().NumAxes(), 1);
   CHECK_EQ_OR_RETURN(scalar->shape().At(0), 1);
   user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
