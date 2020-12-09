@@ -66,10 +66,19 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     if (op_node->out_edges().size() != 1) { return; }
     const OpNode* sole_dst_node = op_node->SoleOutEdge()->dst_node();
     if (!IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul_by_tensor")) { return; }
+    const user_op::UserOpConfWrapper cast_user_conf(op_node->op().op_conf());
+    if (op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.input("in", 0))).data_type()
+        != DataType::kFloat16) {
+      return;
+    }
+    if (op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.input("out", 0))).data_type()
+        != DataType::kFloat) {
+      return;
+    }
+    if (op_node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
+    const user_op::UserOpConfWrapper scale_user_conf(sole_dst_node->op().op_conf());
     OperatorConf new_op_conf = sole_dst_node->op().op_conf();
     new_op_conf.mutable_user_conf()->set_op_type_name("fused_cast_scale");
-    const user_op::UserOpConfWrapper cast_user_conf(op_node->op().op_conf());
-    const user_op::UserOpConfWrapper scale_user_conf(sole_dst_node->op().op_conf());
     const auto new_val = cast_user_conf.input("in", 0);
     const auto& old_val =
         ReplaceInputLbnInOpCustomizedConf(&new_op_conf, GenRepeatedBn("x", 0), new_val);
