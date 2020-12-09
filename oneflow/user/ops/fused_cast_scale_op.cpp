@@ -30,8 +30,8 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
 }
 
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
-  const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-  for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {
+  const auto& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  for (int i = 0; i < x.shape().NumAxes(); ++i) {
     ctx->NewBuilder()
         .Broadcast(user_op::OpArg("scalar", 0))
         .Split(user_op::OpArg("x", 0), i)
