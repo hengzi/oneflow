@@ -586,11 +586,11 @@ void CollectiveBoxingExecutor::DumpSummary() const {
 
 void CollectiveBoxingExecutor::Enqueue(const RankDesc& rank_desc,
                                        const RuntimeRequestInfo& request_info) {
+  const std::string& name = rank_desc.op_desc().name();
+  auto it = name2request_id_.find(name);
+  CHECK(it != name2request_id_.end());
   std::unique_lock<std::mutex> lock(mutex_);
   {
-    const std::string& name = rank_desc.op_desc().name();
-    auto it = name2request_id_.find(name);
-    CHECK(it != name2request_id_.end());
     const int64_t request_id = it->second;
     RequestState& request_state = request_id2request_state_.at(it->second);
     if (current_job_id_ == -1) {
