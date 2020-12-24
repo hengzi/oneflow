@@ -30,11 +30,11 @@ const AMPList& AutoMixedPrecisionLists::BlackList() {
 
 const AMPList& AutoMixedPrecisionLists::GrayList() {
   static AMPList gray_list = {"add_n",         "avg_pool_1d",   "avg_pool_2d",
-                              "avg_pool_3d",   "bias_add",      "multiply",
+                              "avg_pool_3d",   "multiply",
                               "sigmoid",       "tanh",          "sqrt",
                               "scalar_mul",    "scalar_add",    "broadcast_add",
                               "broadcast_sub", "broadcast_mul", "broadcast_div",
-                              "layer_norm",    "dropout",       "softmax",
+                              "dropout",       "softmax",
                               "gelu",          "normalization", "normalization_add_relu"};
   return gray_list;
 }
