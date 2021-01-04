@@ -343,6 +343,7 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
     .Input("learning_rate")
     .Input("momentum")
     .Attr<float>("beta", 0.9)
+    .Attr<float>("weight_decay", 0.0)
     .SetTensorDescInferFn(InferIndexedSlicesMomentumUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

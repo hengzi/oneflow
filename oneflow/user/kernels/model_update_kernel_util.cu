@@ -140,7 +140,7 @@ __global__ void MomentumUpdateGpu(int64_t n, T scale, float l1, float l2, float 
 
 template<typename T, typename K, typename IDX>
 __global__ void IndexedSlicesMomentumUpdateGpu(T beta, int64_t feature_size, int64_t lower_bound,
-                                               int64_t upper_bound, const IDX* num_unique_instance,
+                                               int64_t upper_bound, float weight_decay, const IDX* num_unique_instance,
                                                const float* learning_rate, const K* indices,
                                                const T* values, T* model, T* momentum) {
   const int64_t n = *num_unique_instance * feature_size;
@@ -152,7 +152,7 @@ __global__ void IndexedSlicesMomentumUpdateGpu(T beta, int64_t feature_size, int
     if (instance_id >= lower_bound && instance_id < upper_bound) {
       const IDX model_idx = (instance_id - lower_bound) * feature_size + inner_idx;
       MomentumUpdateFunctor<T, T>()(values + i, model + model_idx, momentum + model_idx,
-                                    static_cast<T>(1), 0.0, 0.0, beta, 0.0, lr);
+                                    static_cast<T>(1), 0.0, 0.0, beta, weight_decay, lr);
     }
   }
 }
@@ -201,7 +201,7 @@ template struct MomentumUpdateKernelUtil<DeviceType::kGPU, float, float16>;
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX> {
   static void Update(DeviceCtx* ctx, T beta, int64_t num_instance, int64_t feature_size,
-                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
+                     int64_t lower_bound, int64_t upper_bound, float weight_decay, const IDX* num_unique_instance,
                      const float* learning_rate, const K* indices, const T* values, T* model,
                      T* momentum);
 };
@@ -209,11 +209,11 @@ struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX> {
 template<typename T, typename K, typename IDX>
 void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX>::Update(
     DeviceCtx* ctx, T beta, int64_t num_instance, int64_t feature_size, int64_t lower_bound,
-    int64_t upper_bound, const IDX* num_unique_instance, const float* learning_rate,
+    int64_t upper_bound, float weight_decay, const IDX* num_unique_instance, const float* learning_rate,
     const K* indices, const T* values, T* model, T* momentum) {
   IndexedSlicesMomentumUpdateGpu<T, K>
       <<<BlocksNum4ThreadsNum(num_instance * feature_size), kCudaThreadsNumPerBlock, 0,
-         ctx->cuda_stream()>>>(beta, feature_size, lower_bound, upper_bound, num_unique_instance,
+         ctx->cuda_stream()>>>(beta, feature_size, lower_bound, upper_bound, weight_decay, num_unique_instance,
                                learning_rate, indices, values, model, momentum);
 }
 

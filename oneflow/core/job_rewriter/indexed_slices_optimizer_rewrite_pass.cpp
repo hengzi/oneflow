@@ -92,7 +92,6 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     }
     if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
         || user_op_conf.attr<float>("l2") != 0.0f
-        || user_op_conf.attr<float>("weight_decay") != 0.0f
         || user_op_conf.has_input("scale_by_tensor", 0)) {
       return;
     }
@@ -113,7 +112,8 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
       // do nothing
     } else if (user_op_conf.op_type_name() == "momentum_update") {
       indexed_slices_op_builder.Input("momentum", user_op_conf.input("momentum", 0))
-          .Attr<float>("beta", user_op_conf.attr<float>("beta"));
+          .Attr<float>("beta", user_op_conf.attr<float>("beta"))
+          .Attr<float>("weight_decay", user_op_conf.attr<float>("weight_decay"));
     } else if (user_op_conf.op_type_name() == "adam_update") {
       indexed_slices_op_builder.Input("m", user_op_conf.input("m", 0))
           .Input("v", user_op_conf.input("v", 0))

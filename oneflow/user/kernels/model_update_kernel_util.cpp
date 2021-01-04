@@ -101,7 +101,7 @@ template struct MomentumUpdateKernelUtil<DeviceType::kCPU, double, double>;
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
   static void Update(DeviceCtx* ctx, T beta, int64_t num_instance, int64_t feature_size,
-                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
+                     int64_t lower_bound, int64_t upper_bound, float weight_decay, const IDX* num_unique_instance,
                      const float* learning_rate, const K* indices, const T* values, T* model,
                      T* momentum);
 };
@@ -109,7 +109,7 @@ struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
 template<typename T, typename K, typename IDX>
 void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX>::Update(
     DeviceCtx* ctx, T beta, int64_t num_instance, int64_t feature_size, int64_t lower_bound,
-    int64_t upper_bound, const IDX* num_unique_instance, const float* learning_rate,
+    int64_t upper_bound, float weight_decay, const IDX* num_unique_instance, const float* learning_rate,
     const K* indices, const T* values, T* model, T* momentum) {
   const int64_t n = *num_unique_instance * feature_size;
   const T lr = *learning_rate;
@@ -120,7 +120,7 @@ void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX>::Updat
     if (instance_id >= lower_bound && instance_id < upper_bound) {
       const IDX model_idx = (instance_id - lower_bound) * feature_size + inner_idx;
       MomentumUpdateFunctor<T, T>()(values + i, model + model_idx, momentum + model_idx, 1.0, 0.0,
-                                    0.0, beta, 0.0, lr);
+                                    0.0, beta, weight_decay, lr);
     }
   }
 }

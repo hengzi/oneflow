@@ -311,6 +311,7 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
     const auto beta = ctx->Attr<float>("beta");
+    const auto weight_decay = ctx->Attr<float>("weight_decay");
     const int64_t num_indices = model_diff_indices->shape().elem_cnt();
     const int64_t num_values = model_diff_values->shape().elem_cnt();
     if (num_indices == 0) {
@@ -334,7 +335,7 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
     MdUpdateUtilT::Update(ctx->device_ctx(), beta, num_indices, feature_size, kernel_state->lower(),
-                          kernel_state->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
+                          kernel_state->upper(), weight_decay, buffer_manager.NumUniqueDiffIndicesPtr(),
                           learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
                           buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(),
                           momentum->mut_dptr<T>());
