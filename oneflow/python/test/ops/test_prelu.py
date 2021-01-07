@@ -24,17 +24,37 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
 
 
-def _check(test_case, x, y, shared_axes):
+def _prelu(inputs, alpha, name):
+    op = (
+        flow.user_op_builder(name)
+        .Op("prelu")
+        .Input("x", [inputs])
+        .Input("alpha", [alpha])
+        .Output("y")
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
+def _check(test_case, x, y, shared_axes, dtype):
     alpha_of = test_global_storage.Get("alpha")
     alpha = np.expand_dims(alpha_of, axis=0)
     dy = test_global_storage.Get("loss_diff")
+    if dtype == "float16":
+        x = x.astype(np.float16)
+        alpha = alpha.astype(np.float16)
+        dy = dy.astype(np.float16)
     np_prelu_out = np.where(x > 0, x, x * alpha)
     np_prelu_x_diff = np.where(x > 0, dy, dy * alpha)
     np_prelu_alpha_diff = np.where(x > 0, 0, dy * x)
+    if dtype == "float16":
+        np_prelu_alpha_diff = np_prelu_alpha_diff.astype(np.float32)
     np_prelu_alpha_diff = np.add.reduce(
         np_prelu_alpha_diff, axis=shared_axes, keepdims=True
     )
     np_prelu_alpha_diff = np.add.reduce(np_prelu_alpha_diff, axis=0)
+    if dtype == "float16":
+        np_prelu_alpha_diff = np_prelu_alpha_diff.astype(np.float16).astype(np.float32)
     test_case.assertTrue(np.allclose(np_prelu_out, y))
     test_case.assertTrue(
         np.allclose(np_prelu_x_diff, test_global_storage.Get("x_diff"))
@@ -50,24 +70,19 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
+    if dtype == "float16":
+        data_type = flow.float
+    else:
+        data_type = type_name_to_flow_type[dtype]
+
     @flow.global_function(type="train", function_config=func_config)
-    def PreluJob(
-        x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[dtype])
-    ):
+    def PreluJob(x: oft.Numpy.Placeholder(x_shape, dtype=data_type)):
         with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="v1",
                 shape=(1,),
-                dtype=type_name_to_flow_type[dtype],
+                dtype=data_type,
                 initializer=flow.zeros_initializer(),
-            )
-            loss = flow.layers.prelu(
-                x,
-                alpha_initializer=flow.random_uniform_initializer(
-                    minval=0.1, maxval=0.9
-                ),
-                shared_axes=shared_axes,
-                name="prelu",
             )
             alpha_shape = list(x.shape[1:])
             if shared_axes is not None:
@@ -76,9 +91,21 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
             alpha = flow.get_variable(
                 "prelu-alpha",
                 shape=tuple(alpha_shape),
-                dtype=type_name_to_flow_type[dtype],
+                dtype=data_type,
                 initializer=flow.random_uniform_initializer(minval=0.1, maxval=0.9),
             )
+            if dtype == "float16":
+                loss = flow.cast(
+                    _prelu(
+                        flow.cast(x, dtype=flow.float16),
+                        flow.cast(alpha, dtype=flow.float16),
+                        name="prelu",
+                    ),
+                    dtype=flow.float,
+                )
+            else:
+                loss = _prelu(x, alpha, name="prelu",)
+
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(loss)
@@ -92,11 +119,12 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
 
             return loss
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-    x = (np.random.random(x_shape) - 1).astype(type_name_to_np_type[dtype])
+    if dtype == "float16":
+        x = (np.random.random(x_shape) - 1).astype(np.float16).astype(np.float32)
+    else:
+        x = (np.random.random(x_shape) - 1).astype(type_name_to_np_type[dtype])
     y = PreluJob(x).get()
-    _check(test_case, x, y.numpy(), shared_axes)
+    _check(test_case, x, y.numpy(), shared_axes, dtype)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -105,11 +133,13 @@ class TestPrelu(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        arg_dict["dtype"] = ["float32", "double"]
+        arg_dict["dtype"] = ["float32", "double", "float16"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
         arg_dict["shared_axes"] = [(2,), (2, 3), (1,), (1, 2), (1, 2, 3)]
 
         for arg in GenArgList(arg_dict):
+            if arg[1] == "cpu" and arg[2] == "float16":
+                continue
             _run_test(*arg)
 
 
