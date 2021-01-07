@@ -141,9 +141,9 @@ struct MomentumUpdateKernelUtil {
 template<DeviceType device_type, typename T, typename K, typename IDX>
 struct IndexedSlicesMomentumMdUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, T beta, int64_t num_instance, int64_t feature_size,
-                     int64_t lower_bound, int64_t upper_bound, float weight_decay, const IDX* num_unique_instance,
-                     const float* learning_rate, const K* indices, const T* values, T* model,
-                     T* momentum);
+                     int64_t lower_bound, int64_t upper_bound, float weight_decay,
+                     const IDX* num_unique_instance, const float* learning_rate, const K* indices,
+                     const T* values, T* model, T* momentum);
 };
 
 template<DeviceType device_type, typename T, typename G>

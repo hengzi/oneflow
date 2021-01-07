@@ -334,11 +334,11 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
-    MdUpdateUtilT::Update(ctx->device_ctx(), beta, num_indices, feature_size, kernel_state->lower(),
-                          kernel_state->upper(), weight_decay, buffer_manager.NumUniqueDiffIndicesPtr(),
-                          learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
-                          buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(),
-                          momentum->mut_dptr<T>());
+    MdUpdateUtilT::Update(
+        ctx->device_ctx(), beta, num_indices, feature_size, kernel_state->lower(),
+        kernel_state->upper(), weight_decay, buffer_manager.NumUniqueDiffIndicesPtr(),
+        learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
+        buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

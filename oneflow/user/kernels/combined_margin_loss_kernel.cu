@@ -33,7 +33,7 @@ __global__ void GpuForward(const int64_t n, const int64_t num_classes, const int
     T out_data = in_data;
     K label = labels[row_id] - lower_bound;
     if (label == col_id) {
-      if(m1 == 1.0 && m2 == 0.0) {
+      if (m1 == 1.0 && m2 == 0.0) {
         out_data = in_data - m3;
       } else {
         const T theta_data = AcosFunctor<T>::Forward(in_data);
